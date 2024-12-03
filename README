@@ -1,0 +1,137 @@
+
+# Distributed Matrix Multiplication using SUMMA Algorithm
+
+This project implements the **SUMMA (Scalable Universal Matrix Multiplication Algorithm)** using the **Dask** library to distribute computations across multiple machines. The project demonstrates efficient parallel computation of large matrix multiplications using a 2-worker distributed system.
+
+## Table of Contents
+1. [Introduction](#introduction)
+2. [Requirements](#requirements)
+3. [Installation](#installation)
+4. [Usage](#usage)
+5. [Architecture](#architecture)
+6. [Troubleshooting](#troubleshooting)
+
+---
+
+## Introduction
+
+Matrix multiplication is a fundamental operation in many scientific and engineering fields. The **SUMMA** algorithm is a scalable and efficient method for performing matrix multiplications in a distributed environment.
+
+In this project, the implementation uses the **Dask** library to:
+- Split matrices into smaller chunks.
+- Distribute the chunks to multiple workers.
+- Compute the result in parallel using the SUMMA algorithm.
+
+---
+
+## Requirements
+
+- Python 3.8 or later
+- Dask and its distributed components
+- Compatible versions of the following libraries:
+  - `numpy`
+  - `pandas`
+  - `dask[distributed]`
+  - `tornado`
+
+---
+
+## Installation
+
+1. **Set up Python Environment**:
+   Create a virtual environment to manage dependencies:
+   ```bash
+   python -m venv project_env
+   source project_env/bin/activate  # For Linux/MacOS
+   project_env\Scripts\activate    # For Windows
+   ```
+
+2. **Install Dependencies**:
+   Use `pip` to install the required libraries:
+   ```bash
+   pip install dask[distributed] numpy pandas tornado
+   ```
+
+3. **Verify Installation**:
+   Check if Dask and its components are installed correctly:
+   ```bash
+   python -c "import dask; print(dask.__version__)"
+   ```
+
+---
+
+## Usage
+
+1. **Set up the Dask Scheduler**:
+   Start the Dask scheduler on the main machine:
+   ```bash
+   dask-scheduler
+   ```
+   Note the scheduler address, e.g., `tcp://192.168.1.105:8786`.
+
+2. **Start the Dask Workers**:
+   On both machines, start a Dask worker and connect it to the scheduler:
+   ```bash
+   dask-worker tcp://192.168.1.105:8786
+   ```
+
+3. **Run the Python Program**:
+   Execute the matrix multiplication script from the main machine:
+   ```bash
+   python summa_code.py
+   ```
+
+---
+
+## Architecture
+
+This project uses the SUMMA algorithm implemented with Dask arrays. Here's how the computation is distributed:
+1. Matrices \( A \) and \( B \) are split into chunks.
+2. Chunks are distributed across the two workers:
+   - Worker 1 processes part of \( A \) and \( B \).
+   - Worker 2 processes the remaining parts.
+3. Each worker computes partial results of the matrix \( C \).
+4. The partial results are aggregated to form the final matrix \( C \).
+
+**Example Workflow**:
+- Worker 1 computes \( A_1 \times B_1 \).
+- Worker 2 computes \( A_2 \times B_2 \).
+- Results are combined and returned to the client.
+
+---
+
+## Troubleshooting
+
+### Version Mismatch Warning
+If you see a version mismatch warning during execution, ensure all machines (Client, Scheduler, Workers) have the same versions of key libraries:
+```bash
+pip install numpy==2.0.2 pandas==2.2.3 tornado==6.4.2
+```
+
+### Worker Connection Issues
+- Ensure all machines are on the same network.
+- Verify the scheduler IP address and port are correct (e.g., `tcp://192.168.1.105:8786`).
+
+### Memory or Performance Issues
+- Adjust `chunk_size` in the code to balance memory and computation.
+- Monitor workers using the Dask dashboard at `http://<scheduler-ip>:8787`.
+
+---
+
+## Monitoring and Debugging
+
+You can monitor the Dask cluster using the web-based dashboard. Open the following URL in your browser:
+```
+http://<scheduler-ip>:8787
+```
+
+The dashboard provides insights into:
+- Task progress.
+- Worker resource utilization (CPU, memory).
+- Communication between workers.
+
+---
+
+## Acknowledgments
+
+This project is inspired by the scalability of the SUMMA algorithm and the distributed capabilities of Dask.
