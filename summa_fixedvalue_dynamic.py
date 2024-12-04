@@ -3,6 +3,7 @@
 # scheduler run: dask scheduler
 # worker run: dask worker tcp://<scheduler_ip>:8786
 # another terminal: python summa_fixedvalue_dynamic.py
+# watch the dask in: http://localhost:8787/status
 
 import dask.array as da
 from dask.distributed import Client
@@ -13,7 +14,7 @@ import numpy as np
 from dask import delayed
 
 # Connect to the Dask Scheduler
-client = Client("tcp://192.168.67.213:8786")  # Replace with your scheduler address
+client = Client("tcp://192.168.250.213:8786")  # Replace with your scheduler address
 
 # Sequential matrix multiplication for blocks
 @delayed
@@ -80,12 +81,15 @@ def summa_distributed(A, B, num_workers):
     return C
 
 # Benchmark function
-def benchmark_summa_distributed(max_size, step_multiplier):
+def benchmark_summa_distributed(max_size, step_multiplier, num_repeats=3):
     """
-    Benchmark distributed SUMMA with fixed value matrices, with size increasing by powers of step_multiplier.
+    Benchmark distributed SUMMA with random value matrices, with size increasing by powers of step_multiplier.
+    Runs each test multiple times and outputs results with separate columns for each run.
+    
     :param max_size: Maximum matrix size (n x n).
     :param step_multiplier: Multiplier for each step (e.g., 2 for powers of 2).
-    :return: DataFrame containing size and computation times.
+    :param num_repeats: Number of times to repeat each test.
+    :return: DataFrame containing size and computation times for each run.
     """
     results = []
 
@@ -96,32 +100,44 @@ def benchmark_summa_distributed(max_size, step_multiplier):
     size = step_multiplier  # Start with the smallest size (2)
     while size <= max_size:
         M = K = N = size
-        value = 3  # Fixed value for all matrix elements
 
-        # Create matrices with fixed values
-        A = da.full((M, K), value, chunks=(math.ceil(M / num_workers), K))
-        B = da.full((K, N), value, chunks=(K, math.ceil(N / num_workers)))
+        repeat_times = []  # Store times for each repeat
+        for repeat in range(num_repeats):
+            # Create matrices with random values between 1 and 10
+            A = da.random.randint(1, 11, size=(M, K), chunks=(math.ceil(M / num_workers), K))
+            B = da.random.randint(1, 11, size=(K, N), chunks=(K, math.ceil(N / num_workers)))
 
-        # Measure time for computation
-        start_time = time.time()
-        C = summa_distributed(A, B, num_workers)
-        C.compute()  # Trigger computation
-        end_time = time.time()
+            # Measure time for computation
+            start_time = time.time()
+            C = summa_distributed(A, B, num_workers)
+            C.compute()  # Trigger computation
+            end_time = time.time()
 
-        computation_time = end_time - start_time
-        results.append({"Matrix Size (n x n)": size, "Computation Time (s)": computation_time})
-        print(f"Completed for size {size}x{size} in {computation_time:.4f} seconds")
+            computation_time = end_time - start_time
+            repeat_times.append(computation_time)
+            print(f"Run {repeat + 1}/{num_repeats} for size {size}x{size} completed in {computation_time:.4f} seconds")
+
+        # Add data to results
+        result_entry = {
+            "Matrix Size (n x n)": size,
+        }
+        for i, run_time in enumerate(repeat_times, start=1):
+            result_entry[f"Run {i} Time (s)"] = run_time
+        
+        results.append(result_entry)
 
         size *= step_multiplier  # Multiply the size for the next step
 
     return pd.DataFrame(results)
 
-# Run benchmark with step multiplier of 2
-max_matrix_size = 1024  # Maximum size of the square matrix
+# Run benchmark with step multiplier of 2 and 3 repeats for each size
+max_matrix_size = 512  # Maximum size of the square matrix
 step_multiplier = 2    # Increase size by powers of 2
-benchmark_results = benchmark_summa_distributed(max_matrix_size, step_multiplier)
+num_repeats = 3        # Repeat each test 3 times
+
+benchmark_results = benchmark_summa_distributed(max_matrix_size, step_multiplier, num_repeats)
 
 # Save results to an Excel file
-output_file = "summa_distributed_benchmark_results_powers_of_2.xlsx"
+output_file = "summa_distributed_benchmark_results_repeated_separate_runs.xlsx"
 benchmark_results.to_excel(output_file, index=False)
 print(f"Results saved to {output_file}")
