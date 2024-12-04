@@ -1,13 +1,15 @@
-import dask.array as da
-from dask.distributed import Client
+import math
 import time
 import pandas as pd
-import math
 import numpy as np
+from dask.distributed import Client, LocalCluster
+import dask.array as da
 from dask import delayed
 
-# Connect to the Dask Scheduler
-client = Client("tcp://192.168.67.213:8786")  # Replace with your scheduler address
+# Start a local Dask cluster
+cluster = LocalCluster()
+client = Client(cluster)
+print(client)
 
 # Sequential matrix multiplication for blocks
 @delayed
@@ -74,11 +76,11 @@ def summa_distributed(A, B, num_workers):
     return C
 
 # Benchmark function
-def benchmark_summa_distributed(max_size, step_multiplier):
+def benchmark_summa_distributed(max_size, step):
     """
-    Benchmark distributed SUMMA with fixed value matrices, with size increasing by powers of step_multiplier.
+    Benchmark distributed SUMMA with fixed value matrices.
     :param max_size: Maximum matrix size (n x n).
-    :param step_multiplier: Multiplier for each step (e.g., 2 for powers of 2).
+    :param step: Step size for increasing matrix dimensions.
     :return: DataFrame containing size and computation times.
     """
     results = []
@@ -87,8 +89,7 @@ def benchmark_summa_distributed(max_size, step_multiplier):
     num_workers = len(client.scheduler_info()["workers"])
     print(f"Number of workers detected: {num_workers}")
 
-    size = step_multiplier  # Start with the smallest size (2)
-    while size <= max_size:
+    for size in range(step, max_size + 1, step):
         M = K = N = size
         value = 3  # Fixed value for all matrix elements
 
@@ -106,16 +107,14 @@ def benchmark_summa_distributed(max_size, step_multiplier):
         results.append({"Matrix Size (n x n)": size, "Computation Time (s)": computation_time})
         print(f"Completed for size {size}x{size} in {computation_time:.4f} seconds")
 
-        size *= step_multiplier  # Multiply the size for the next step
-
     return pd.DataFrame(results)
 
-# Run benchmark with step multiplier of 2
-max_matrix_size = 1024  # Maximum size of the square matrix
-step_multiplier = 2    # Increase size by powers of 2
-benchmark_results = benchmark_summa_distributed(max_matrix_size, step_multiplier)
+# Run benchmark
+max_matrix_size = 2000  # Maximum size of the square matrix
+step_size = 500         # Incremental step size
+benchmark_results = benchmark_summa_distributed(max_matrix_size, step_size)
 
 # Save results to an Excel file
-output_file = "summa_distributed_benchmark_results_powers_of_2.xlsx"
+output_file = "summa_distributed_benchmark_results.xlsx"
 benchmark_results.to_excel(output_file, index=False)
 print(f"Results saved to {output_file}")
