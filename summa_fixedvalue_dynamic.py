@@ -1,3 +1,9 @@
+# dask distributed summa with fixed value matrices and dynamic chunk sizes
+# terminal command: python summa_fixedvalue_dynamic.py
+# scheduler run: dask scheduler
+# worker run: dask worker tcp://<scheduler_ip>:8786
+# another terminal: python summa_fixedvalue_dynamic.py
+
 import dask.array as da
 from dask.distributed import Client
 import time
